@@ -2,31 +2,48 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
-<div id="app" class="bg-white p-6 sm:p-10 rounded-xl shadow-2xl w-full max-w-4xl mx-auto my-8 border border-gray-100">
+<div id="app" class="relative bg-white p-6 sm:p-10 rounded-xl shadow-2xl w-full max-w-4xl mx-auto my-8 border border-gray-100">
     
-    <!-- PenSure Branding -->
-    <div class="text-center mb-10">
+    <!-- Language Toggle -->
+    <div class="absolute top-6 right-6 sm:right-10 text-sm font-semibold text-slate-400 cursor-pointer select-none tracking-wider">
+        <span @click="lang = 'en'" :class="lang === 'en' ? 'text-blue-700' : 'hover:text-blue-500'">EN</span>
+        <span class="mx-2">|</span>
+        <span @click="lang = 'zh'" :class="lang === 'zh' ? 'text-blue-700' : 'hover:text-blue-500'">中文</span>
+    </div>
+
+    <!-- PenSure Branding & Header Contact -->
+    <div class="text-center mb-10 mt-4 sm:mt-0">
         <h2 class="text-4xl font-extrabold text-slate-800 tracking-tight m-0">PenSure</h2>
-        <h2 class="text-4xl font-extrabold text-slate-800 tracking-tight m-0">Travel Insurance Calculator</h2>
         <p class="text-md text-slate-600 mt-2 font-medium">Precision in Planning, Purity in Protection</p>
         <p class="text-sm text-slate-400 mt-1 tracking-widest">睿见风险，必得平顺</p>
-        <p class="text-sm text-slate-400 mt-1 tracking-widest">访客旅游保险计算器</p>
+        
+        <div class="mt-5 flex justify-center items-center space-x-4 sm:space-x-6 text-sm font-semibold text-slate-700 bg-slate-100 py-2 px-6 rounded-full inline-flex">
+            <span>Travel Insurance Calculator</span>
+            <span class="text-slate-300">|</span>
+            <span>访客旅游保险计算器</span></span>
+        </div>
     </div>
-    
+
     <!-- Interactive Form -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-lg border border-slate-200">
         <div>
-            <label class="block text-sm font-semibold text-slate-700">Client Age</label>
-            <input type="number" v-model.number="age" class="mt-2 block w-full border border-slate-300 rounded-md p-3 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 80">
+            <label class="block text-sm font-semibold text-slate-700">
+                {{ lang === 'en' ? 'Client Age' : '客户年龄' }}
+            </label>
+            <input type="number" v-model.number="age" class="mt-2 block w-full border border-slate-300 rounded-md p-3 focus:ring-blue-500 focus:border-blue-500" :placeholder="lang === 'en' ? 'e.g. 80' : '例如 80'">
         </div>
 
         <div>
-            <label class="block text-sm font-semibold text-slate-700">Length of Stay (Days)</label>
-            <input type="number" v-model.number="days" class="mt-2 block w-full border border-slate-300 rounded-md p-3 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 30">
+            <label class="block text-sm font-semibold text-slate-700">
+                {{ lang === 'en' ? 'Length of Stay (Days)' : '承保天数' }}
+            </label>
+            <input type="number" v-model.number="days" class="mt-2 block w-full border border-slate-300 rounded-md p-3 focus:ring-blue-500 focus:border-blue-500" :placeholder="lang === 'en' ? 'e.g. 30' : '例如 30'">
         </div>
 
         <div>
-            <label class="block text-sm font-semibold text-slate-700">Coverage Amount</label>
+            <label class="block text-sm font-semibold text-slate-700">
+                {{ lang === 'en' ? 'Coverage Amount' : '保额' }}
+            </label>
             <select v-model="coverage" class="mt-2 block w-full border border-slate-300 rounded-md p-3 bg-white">
                 <option value="25000">$25,000</option>
                 <option value="50000">$50,000</option>
@@ -35,10 +52,12 @@
         </div>
 
         <div>
-            <label class="block text-sm font-semibold text-slate-700">Stable Pre-Existing Conditions</label>
+            <label class="block text-sm font-semibold text-slate-700">
+                {{ lang === 'en' ? 'Stable Pre-Existing Conditions' : '已有稳定疾病' }}
+            </label>
             <select v-model="hasPreExisting" class="mt-2 block w-full border border-slate-300 rounded-md p-3 bg-white">
-                <option :value="true">Include Coverage</option>
-                <option :value="false">Exclude Coverage</option>
+                <option :value="true">{{ lang === 'en' ? 'Include Coverage' : '包含承保' }}</option>
+                <option :value="false">{{ lang === 'en' ? 'Exclude Coverage' : '不包含承保' }}</option>
             </select>
         </div>
     </div>
@@ -49,21 +68,23 @@
     </div>
 
     <button @click="calculateQuotes" class="w-full bg-blue-700 text-white font-bold text-lg py-4 px-4 rounded-md hover:bg-blue-800 transition duration-150 mt-6 shadow-md">
-        Calculate Premiums
+        {{ lang === 'en' ? 'Calculate Premiums' : '计算保费' }}
     </button>
 
     <!-- Results Section -->
     <div v-if="quotes.length > 0" class="mt-10">
-        <h3 class="text-2xl font-bold text-slate-800 mb-4 border-b pb-2">Quote Comparison</h3>
+        <h3 class="text-2xl font-bold text-slate-800 mb-4 border-b pb-2">
+            {{ lang === 'en' ? 'Quote Comparison' : '报价对比' }}
+        </h3>
         
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-slate-100 text-slate-600 text-sm uppercase tracking-wider">
-                        <th class="p-4 rounded-tl-lg">Insurance Company</th>
-                        <th class="p-4">Deductible</th>
-                        <th class="p-4">Daily Premium</th>
-                        <th class="p-4 rounded-tr-lg">Total Premium</th>
+                        <th class="p-4 rounded-tl-lg">{{ lang === 'en' ? 'Insurance Company' : '保险公司' }}</th>
+                        <th class="p-4">{{ lang === 'en' ? 'Deductible' : '免赔额' }}</th>
+                        <th class="p-4">{{ lang === 'en' ? 'Daily Premium' : '日保费' }}</th>
+                        <th class="p-4 rounded-tr-lg">{{ lang === 'en' ? 'Total Premium' : '总保费' }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,30 +101,39 @@
                         </td>
                         <td class="p-4 font-bold text-lg" :class="quote.available ? 'text-emerald-600' : 'text-slate-400 font-normal italic'">
                             <span v-if="quote.available">${{ quote.totalPremium.toFixed(2) }}</span>
-                            <span v-else class="text-sm">Not Available for Age/Condition</span>
+                            <span v-else class="text-sm">{{ lang === 'en' ? 'Not Available for Age/Condition' : '无适用计划' }}</span>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
-        
+
+        <!-- Contact Call to Action Box -->
         <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6 text-center shadow-inner">
-            <h4 class="text-xl font-bold text-blue-900 mb-2">Ready to Secure Your Coverage?</h4>
-            <p class="text-slate-600 mb-5">Contact us directly to finalize this quote or ask any questions.</p>
+            <h4 class="text-xl font-bold text-blue-900 mb-2">
+                {{ lang === 'en' ? 'Ready to Secure Your Coverage?' : '准备好购买保险了吗？' }}
+            </h4>
+            <p class="text-slate-600 mb-5">
+                {{ lang === 'en' ? 'Contact me directly to finalize this quote or ask any questions.' : '请直接联系以完成报价或咨询任何疑问。' }}
+            </p>
             
             <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-8">
+                <!-- Phone Link (Clickable on Mobile) -->
                 <a href="tel:+17809523927" class="flex items-center bg-white text-blue-700 font-bold text-lg py-2 px-6 rounded-full border border-blue-200 hover:bg-blue-600 hover:text-white transition duration-200 shadow-sm">
-                    📞 (780) 952-3927
+                    📞 (780) 9523927
                 </a>
                 
+                <!-- WeChat ID -->
                 <div class="flex items-center bg-white text-emerald-600 font-bold text-lg py-2 px-6 rounded-full border border-emerald-200 shadow-sm">
-                    💬 WeChat: robertyangpan
+                    💬 WeChat: your_wechat_id
                 </div>
             </div>
         </div>
         
+        <!-- Compliance Disclaimer -->
         <p class="text-xs text-slate-400 italic mt-6 leading-relaxed">
-            * This is a representative illustration for estimation purposes only. Actual guaranteed premiums are established during the formal underwriting process and will be shown in your final contract. Rates assume standard health. Contact PenSure for a personalized, binding quote.
+            <span v-if="lang === 'en'">* This is a representative illustration for estimation purposes only. Actual guaranteed premiums are established during the formal underwriting process and will be shown in your final contract. Rates assume standard health. Contact PenSure for a personalized, binding quote.</span>
+            <span v-else>* 此为代表性演示，仅供估算参考。实际保证保费将在正式承保过程中确定，并显示在您的最终合同中。费率按标准健康状况假定。请联系 PenSure 获取个性化、有约束力的报价。</span>
         </p>
     </div>
 </div>
@@ -115,6 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
     createApp({
         data() {
             return {
+                lang: 'en', // Default language
                 age: null,
                 days: null,
                 coverage: '50000',
@@ -178,6 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             { min: 75, max: 79, pre: {'25000': 9.32, '50000': 11.15, '100000': 14.16}, noPre: {'25000': 8.47, '50000': 10.14, '100000': 12.87} },
                             { min: 80, max: 85, pre: {'25000': 11.62, '50000': 12.57, '100000': 14.41}, noPre: {'25000': 10.56, '50000': 11.43, '100000': 13.10} }
                         ]
+
                     },
                     "Tugo": {
                         deductibles: [
@@ -205,22 +237,19 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         methods: {
             calculateQuotes() {
-                // Clear any previous error messages
                 this.errorMessage = '';
                 
-                // 1. Strict Validation - Prevent silent failure!
+                // 1. Strict Validation with translated errors
                 if (!this.age || this.age <= 0) {
-                    this.errorMessage = "Missing Information: Please enter a valid Client Age.";
+                    this.errorMessage = this.lang === 'en' ? "Missing Information: Please enter a valid Client Age." : "信息缺失：请输入有效的客户年龄。";
                     return;
                 }
                 if (!this.days || this.days <= 0) {
-                    this.errorMessage = "Missing Information: Please enter the Length of Stay (Days).";
+                    this.errorMessage = this.lang === 'en' ? "Missing Information: Please enter the Length of Stay (Days)." : "信息缺失：请输入承保天数。";
                     return;
                 }
 
                 let results = [];
-                
-                // Force boolean conversion to prevent string binding errors
                 let isPreExisting = String(this.hasPreExisting) === "true";
                 let covAmount = String(this.coverage);
 
@@ -232,12 +261,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     let isAvailable = false;
                     let baseRate = null;
 
-                    // Safely extract the rate if the bracket and condition exist
+                    // UPDATED LOGIC: Strict check for missing or undefined rates
                     if (bracket) {
                         let conditionData = isPreExisting ? bracket.pre : bracket.noPre;
-                        if (   
-                            conditionData &&
-                            conditionData[covAmount] !== null &&
+                        if (
+                            conditionData && 
+                            conditionData[covAmount] !== null && 
                             conditionData[covAmount] !== undefined
                         ) {
                             baseRate = conditionData[covAmount];
@@ -246,9 +275,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
 
                     // 3. Apply deductibles and calculate
-                    if (isAvailable && baseRate) {
+                    if (isAvailable) {
                         provider.deductibles.forEach(deduct => {
                             let daily = Math.round((baseRate * deduct.modifier) * 100) / 100;
+                            
+                            // UPDATED LOGIC: Perfect rounding for final totals
                             let total = Math.round(daily * this.days * 100) / 100;
                             
                             results.push({
@@ -260,7 +291,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                         });
                     } else {
-                        // Push a blank placeholder to show "Not Available" instead of disappearing
                         results.push({
                             company: company,
                             deductible: 0,
@@ -271,20 +301,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
 
-                // 4. Sort Sequence: Group by Company, then sort Deductibles small to large
+                // 4. Sort Sequence
                 const companyOrder = ["Destination", "JF", "Manulife", "Tugo"];
-                
                 this.quotes = results.sort((a, b) => {
-                    // First sort by company name
                     if (a.company !== b.company) {
                         return companyOrder.indexOf(a.company) - companyOrder.indexOf(b.company);
                     }
-                    
-                    // Push unavailable companies to the bottom of their group
                     if (!a.available && b.available) return 1;
                     if (a.available && !b.available) return -1;
-                    
-                    // Sort deductibles
                     return a.deductible - b.deductible;
                 });
             }
