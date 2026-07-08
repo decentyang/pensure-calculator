@@ -15,12 +15,12 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-lg border border-slate-200">
         <div>
             <label class="block text-sm font-semibold text-slate-700">Client Age</label>
-            <input type="number" v-model.number="age" class="mt-2 block w-full border border-slate-300 rounded-md p-3 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 38">
+            <input type="number" v-model.number="age" class="mt-2 block w-full border border-slate-300 rounded-md p-3 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 80">
         </div>
 
         <div>
             <label class="block text-sm font-semibold text-slate-700">Length of Stay (Days)</label>
-            <input type="number" v-model.number="days" class="mt-2 block w-full border border-slate-300 rounded-md p-3 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 31">
+            <input type="number" v-model.number="days" class="mt-2 block w-full border border-slate-300 rounded-md p-3 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 30">
         </div>
 
         <div>
@@ -39,6 +39,11 @@
                 <option :value="false">Exclude Coverage</option>
             </select>
         </div>
+    </div>
+
+    <!-- On-Screen Error Message -->
+    <div v-if="errorMessage" class="bg-red-50 text-red-600 p-4 rounded-md mt-6 border border-red-200 font-medium text-center">
+        {{ errorMessage }}
     </div>
 
     <button @click="calculateQuotes" class="w-full bg-blue-700 text-white font-bold text-lg py-4 px-4 rounded-md hover:bg-blue-800 transition duration-150 mt-6 shadow-md">
@@ -63,7 +68,6 @@
                     <tr v-for="(quote, index) in quotes" :key="index" class="border-b border-slate-100 hover:bg-slate-50 transition">
                         <td class="p-4 font-semibold text-blue-700">{{ quote.company }}</td>
                         
-                        <!-- Dynamic columns based on availability -->
                         <td class="p-4 text-slate-700">
                             <span v-if="quote.available">${{ quote.deductible }}</span>
                             <span v-else class="text-slate-400 italic">N/A</span>
@@ -85,7 +89,6 @@
             * This is a representative illustration for estimation purposes only. Actual guaranteed premiums are established during the formal underwriting process and will be shown in your final contract. Rates assume standard health. Contact PenSure for a personalized, binding quote.
         </p>
     </div>
-
 </div>
 
 <script>
@@ -99,6 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 days: null,
                 coverage: '50000',
                 hasPreExisting: true,
+                errorMessage: '',
                 quotes: [],
                 
                 // --- RATE DATABASE ---
@@ -118,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             { min: 70, max: 74, pre: {'25000': 7.60, '50000': 9.06, '100000': 11.45}, noPre: {'25000': 4.83, '50000': 6.92, '100000': 7.84} },
                             { min: 75, max: 79, pre: {'25000': 9.34, '50000': 11.60, '100000': 14.20}, noPre: {'25000': 5.70, '50000': 8.04, '100000': 9.73} },
                             { min: 80, max: 85, pre: null, noPre: {'25000': 10.35, '50000': 11.14, '100000': null} },
-                            { min: 86, max: 100, pre: null, noPre: {'25000': 15.95, '50000': null, '100000': null} }
+                            { min: 86, max: 150, pre: null, noPre: {'25000': 15.95, '50000': null, '100000': null} }
                         ]
                     },
                     "JF": {
@@ -136,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             { min: 70, max: 74, pre: {'25000': 8.38, '50000': 9.21, '100000': 10.26}, noPre: {'25000': 4.52, '50000': 6.47, '100000': 7.34} },
                             { min: 75, max: 79, pre: {'25000': 9.89, '50000': 10.48, '100000': 12.78}, noPre: {'25000': 5.34, '50000': 7.52, '100000': 9.11} },
                             { min: 80, max: 85, pre: {'25000': 14.34, '50000': 17.12, '100000': 20.95}, noPre: {'25000': 9.82, '50000': 10.50, '100000': 14.64} },
-                            { min: 86, max: 100, pre: null, noPre: {'25000': 15.02, '50000': 17.22, '100000': 23.42} }
+                            { min: 86, max: 150, pre: null, noPre: {'25000': 15.02, '50000': 17.22, '100000': 23.42} }
                         ]
                     },
                     "Manulife": {
@@ -184,68 +188,82 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         methods: {
             calculateQuotes() {
-                if (!this.age || !this.days) {
-                    alert("Please enter both Age and Length of Stay.");
+                // Clear any previous error messages
+                this.errorMessage = '';
+                
+                // 1. Strict Validation - Prevent silent failure!
+                if (!this.age || this.age <= 0) {
+                    this.errorMessage = "Missing Information: Please enter a valid Client Age.";
+                    return;
+                }
+                if (!this.days || this.days <= 0) {
+                    this.errorMessage = "Missing Information: Please enter the Length of Stay (Days).";
                     return;
                 }
 
                 let results = [];
+                
+                // Force boolean conversion to prevent string binding errors
+                let isPreExisting = String(this.hasPreExisting) === "true";
+                let covAmount = String(this.coverage);
 
-                // Loop through all 4 providers
+                // 2. Loop through all providers safely
                 Object.keys(this.rateData).forEach(company => {
                     let provider = this.rateData[company];
-                    
-                    // Find the matching age bracket
                     let bracket = provider.brackets.find(b => this.age >= b.min && this.age <= b.max);
                     
+                    let isAvailable = false;
+                    let baseRate = null;
+
+                    // Safely extract the rate if the bracket and condition exist
                     if (bracket) {
-                        let conditionData = this.hasPreExisting ? bracket.pre : bracket.noPre;
-                        let baseRate = conditionData ? conditionData[this.coverage] : null;
-                        
-                        if (baseRate) {
-                            provider.deductibles.forEach(deduct => {
-                                let daily = Math.round((baseRate * deduct.modifier) * 100) / 100;
-                                let total = daily * this.days;
-                                
-                                results.push({
-                                    company: company,
-                                    deductible: deduct.amount,
-                                    dailyRate: daily,
-                                    totalPremium: total,
-                                    available: true
-                                });
-                            });
-                        } else {
-                            // The company exists, but they don't cover this specific age/condition pairing
+                        let conditionData = isPreExisting ? bracket.pre : bracket.noPre;
+                        if (conditionData && conditionData[covAmount]) {
+                            baseRate = conditionData[covAmount];
+                            isAvailable = true;
+                        }
+                    }
+
+                    // 3. Apply deductibles and calculate
+                    if (isAvailable && baseRate) {
+                        provider.deductibles.forEach(deduct => {
+                            let daily = Math.round((baseRate * deduct.modifier) * 100) / 100;
+                            let total = daily * this.days;
+                            
                             results.push({
                                 company: company,
-                                deductible: 0,
-                                dailyRate: 0,
-                                totalPremium: 0,
-                                available: false
+                                deductible: deduct.amount,
+                                dailyRate: daily,
+                                totalPremium: total,
+                                available: true
                             });
-                        }
+                        });
                     } else {
-                         // The company has no data at all for this age bracket
-                         results.push({
-                                company: company,
-                                deductible: 0,
-                                dailyRate: 0,
-                                totalPremium: 0,
-                                available: false
-                         });
+                        // Push a blank placeholder to show "Not Available" instead of disappearing
+                        results.push({
+                            company: company,
+                            deductible: 0,
+                            dailyRate: 0,
+                            totalPremium: 0,
+                            available: false
+                        });
                     }
                 });
 
-                // Group by Company, sort deductibles, push unavailable ones to the bottom
+                // 4. Sort Sequence: Group by Company, then sort Deductibles small to large
                 const companyOrder = ["Destination", "JF", "Manulife", "Tugo"];
+                
                 this.quotes = results.sort((a, b) => {
+                    // First sort by company name
                     if (a.company !== b.company) {
                         return companyOrder.indexOf(a.company) - companyOrder.indexOf(b.company);
                     }
+                    
+                    // Push unavailable companies to the bottom of their group
                     if (!a.available && b.available) return 1;
                     if (a.available && !b.available) return -1;
                     
+                    // Sort deductibles
                     return a.deductible - b.deductible;
                 });
             }
