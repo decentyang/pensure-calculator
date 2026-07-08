@@ -218,7 +218,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Safely extract the rate if the bracket and condition exist
                     if (bracket) {
                         let conditionData = isPreExisting ? bracket.pre : bracket.noPre;
-                        if (conditionData && conditionData[covAmount]) {
+                        if (   
+                            conditionData &&
+                            conditionData[covAmount] !== null &&
+                            conditionData[covAmount] !== undefined
+                        ) {
                             baseRate = conditionData[covAmount];
                             isAvailable = true;
                         }
@@ -228,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (isAvailable && baseRate) {
                         provider.deductibles.forEach(deduct => {
                             let daily = Math.round((baseRate * deduct.modifier) * 100) / 100;
-                            let total = daily * this.days;
+                            let total = Math.round(daily * this.days * 100) / 100;
                             
                             results.push({
                                 company: company,
