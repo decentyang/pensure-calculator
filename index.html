@@ -62,13 +62,28 @@
                 <tbody>
                     <tr v-for="(quote, index) in quotes" :key="index" class="border-b border-slate-100 hover:bg-slate-50 transition">
                         <td class="p-4 font-semibold text-blue-700">{{ quote.company }}</td>
-                        <td class="p-4 text-slate-700">${{ quote.deductible }}</td>
-                        <td class="p-4 text-slate-700">${{ quote.dailyRate.toFixed(2) }}</td>
-                        <td class="p-4 font-bold text-emerald-600 text-lg">${{ quote.totalPremium.toFixed(2) }}</td>
+                        
+                        <!-- Dynamic columns based on availability -->
+                        <td class="p-4 text-slate-700">
+                            <span v-if="quote.available">${{ quote.deductible }}</span>
+                            <span v-else class="text-slate-400 italic">N/A</span>
+                        </td>
+                        <td class="p-4 text-slate-700">
+                            <span v-if="quote.available">${{ quote.dailyRate.toFixed(2) }}</span>
+                            <span v-else class="text-slate-400 italic">-</span>
+                        </td>
+                        <td class="p-4 font-bold text-lg" :class="quote.available ? 'text-emerald-600' : 'text-slate-400 font-normal italic'">
+                            <span v-if="quote.available">${{ quote.totalPremium.toFixed(2) }}</span>
+                            <span v-else class="text-sm">Not Available for Age/Condition</span>
+                        </td>
                     </tr>
                 </tbody>
             </table>
         </div>
+        
+        <p class="text-xs text-slate-400 italic mt-6 leading-relaxed">
+            * This is a representative illustration for estimation purposes only. Actual guaranteed premiums are established during the formal underwriting process and will be shown in your final contract. Rates assume standard health. Contact PenSure for a personalized, binding quote.
+        </p>
     </div>
 
 </div>
@@ -184,11 +199,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     let bracket = provider.brackets.find(b => this.age >= b.min && this.age <= b.max);
                     
                     if (bracket) {
-                        // Select correct rate condition
-                        let baseRate = this.hasPreExisting ? bracket.pre[this.coverage] : bracket.noPre[this.coverage];
+                        let conditionData = this.hasPreExisting ? bracket.pre : bracket.noPre;
+                        let baseRate = conditionData ? conditionData[this.coverage] : null;
                         
                         if (baseRate) {
-                            // Calculate each deductible option
                             provider.deductibles.forEach(deduct => {
                                 let daily = Math.round((baseRate * deduct.modifier) * 100) / 100;
                                 let total = daily * this.days;
@@ -197,22 +211,41 @@ document.addEventListener('DOMContentLoaded', function() {
                                     company: company,
                                     deductible: deduct.amount,
                                     dailyRate: daily,
-                                    totalPremium: total
+                                    totalPremium: total,
+                                    available: true
                                 });
                             });
+                        } else {
+                            // The company exists, but they don't cover this specific age/condition pairing
+                            results.push({
+                                company: company,
+                                deductible: 0,
+                                dailyRate: 0,
+                                totalPremium: 0,
+                                available: false
+                            });
                         }
+                    } else {
+                         // The company has no data at all for this age bracket
+                         results.push({
+                                company: company,
+                                deductible: 0,
+                                dailyRate: 0,
+                                totalPremium: 0,
+                                available: false
+                         });
                     }
                 });
 
-                // Sort from lowest total premium to highest
+                // Group by Company, sort deductibles, push unavailable ones to the bottom
                 const companyOrder = ["Destination", "JF", "Manulife", "Tugo"];
-
                 this.quotes = results.sort((a, b) => {
-                    // 1. First, sort by the specific order of companies
                     if (a.company !== b.company) {
                         return companyOrder.indexOf(a.company) - companyOrder.indexOf(b.company);
                     }
-                    // 2. If it's the same company, sort deductibles from small to large
+                    if (!a.available && b.available) return 1;
+                    if (a.available && !b.available) return -1;
+                    
                     return a.deductible - b.deductible;
                 });
             }
