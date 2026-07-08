@@ -1,0 +1,195 @@
+<!-- Load Tailwind CSS and Vue.js -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+<div id="app" class="bg-white p-6 sm:p-10 rounded-xl shadow-2xl w-full max-w-4xl mx-auto my-8 border border-gray-100">
+    
+    <!-- PenSure Branding -->
+    <div class="text-center mb-10">
+        <h2 class="text-4xl font-extrabold text-slate-800 tracking-tight m-0">PenSure</h2>
+        <p class="text-md text-slate-600 mt-2 font-medium">Precision in Planning, Purity in Protection</p>
+        <p class="text-sm text-slate-400 mt-1 tracking-widest">睿见风险，必得平顺</p>
+    </div>
+
+    <!-- Interactive Form -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-lg border border-slate-200">
+        <div>
+            <label class="block text-sm font-semibold text-slate-700">Client Age</label>
+            <input type="number" v-model.number="age" class="mt-2 block w-full border border-slate-300 rounded-md p-3 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 38">
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-slate-700">Length of Stay (Days)</label>
+            <input type="number" v-model.number="days" class="mt-2 block w-full border border-slate-300 rounded-md p-3 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 31">
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-slate-700">Coverage Amount</label>
+            <select v-model="coverage" class="mt-2 block w-full border border-slate-300 rounded-md p-3 bg-white">
+                <option value="25000">$25,000</option>
+                <option value="50000">$50,000</option>
+                <option value="100000">$100,000</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-slate-700">Stable Pre-Existing Conditions</label>
+            <select v-model="hasPreExisting" class="mt-2 block w-full border border-slate-300 rounded-md p-3 bg-white">
+                <option :value="true">Include Coverage</option>
+                <option :value="false">Exclude Coverage</option>
+            </select>
+        </div>
+    </div>
+
+    <button @click="calculateQuotes" class="w-full bg-blue-700 text-white font-bold text-lg py-4 px-4 rounded-md hover:bg-blue-800 transition duration-150 mt-6 shadow-md">
+        Calculate Premiums
+    </button>
+
+    <!-- Results Section -->
+    <div v-if="quotes.length > 0" class="mt-10">
+        <h3 class="text-2xl font-bold text-slate-800 mb-4 border-b pb-2">Quote Comparison</h3>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-100 text-slate-600 text-sm uppercase tracking-wider">
+                        <th class="p-4 rounded-tl-lg">Insurance Company</th>
+                        <th class="p-4">Deductible</th>
+                        <th class="p-4">Daily Premium</th>
+                        <th class="p-4 rounded-tr-lg">Total Premium</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(quote, index) in quotes" :key="index" class="border-b border-slate-100 hover:bg-slate-50 transition">
+                        <td class="p-4 font-semibold text-blue-700">{{ quote.company }}</td>
+                        <td class="p-4 text-slate-700">${{ quote.deductible }}</td>
+                        <td class="p-4 text-slate-700">${{ quote.dailyRate.toFixed(2) }}</td>
+                        <td class="p-4 font-bold text-emerald-600 text-lg">${{ quote.totalPremium.toFixed(2) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const { createApp } = Vue;
+
+    createApp({
+        data() {
+            return {
+                age: null,
+                days: null,
+                coverage: '50000',
+                hasPreExisting: true,
+                quotes: [],
+                
+                // --- RATE DATABASE ---
+                rateData: {
+                    "Destination": {
+                        deductibles: [
+                            { amount: 0, modifier: 1.00 },
+                            { amount: 250, modifier: 0.90 },
+                            { amount: 500, modifier: 0.85 }
+                        ],
+                        brackets: [
+                            { min: 0, max: 25, pre: {'25000': 2.30, '50000': 2.64, '100000': 3.36}, noPre: {'25000': 1.74, '50000': 1.91, '100000': 2.57} },
+                            { min: 26, max: 40, pre: {'25000': 2.52, '50000': 2.74, '100000': 3.56}, noPre: {'25000': 2.03, '50000': 2.21, '100000': 3.16} },
+                            { min: 41, max: 60, pre: {'25000': 2.96, '50000': 3.15, '100000': 4.48}, noPre: {'25000': 2.44, '50000': 2.80, '100000': 3.98} },
+                            { min: 61, max: 64, pre: {'25000': 3.95, '50000': 5.04, '100000': 7.04}, noPre: {'25000': 3.10, '50000': 4.45, '100000': 5.53} },
+                            { min: 65, max: 69, pre: {'25000': 5.11, '50000': 7.19, '100000': 9.08}, noPre: {'25000': 3.47, '50000': 5.70, '100000': 6.40} }
+                        ]
+                    },
+                    "JF": {
+                        deductibles: [
+                            { amount: 0, modifier: 1.00 },
+                            { amount: 100, modifier: 0.95 },
+                            { amount: 500, modifier: 0.85 }
+                        ],
+                        brackets: [
+                            { min: 0, max: 25, pre: {'25000': 2.50, '50000': 2.75, '100000': 3.96}, noPre: {'25000': 1.63, '50000': 1.79, '100000': 2.40} },
+                            { min: 26, max: 40, pre: {'25000': 2.75, '50000': 3.02, '100000': 4.35}, noPre: {'25000': 1.79, '50000': 1.95, '100000': 2.79} },
+                            { min: 41, max: 60, pre: {'25000': 3.00, '50000': 3.27, '100000': 4.41}, noPre: {'25000': 2.09, '50000': 2.40, '100000': 3.55} },
+                            { min: 61, max: 64, pre: {'25000': 3.92, '50000': 4.22, '100000': 4.94}, noPre: {'25000': 2.89, '50000': 3.48, '100000': 4.17} },
+                            { min: 65, max: 69, pre: {'25000': 5.21, '50000': 5.30, '100000': 6.56}, noPre: {'25000': 3.25, '50000': 3.87, '100000': 5.34} }
+                        ]
+                    },
+                    "Manulife": {
+                        deductibles: [
+                            { amount: 0, modifier: 1.05 },
+                            { amount: 75, modifier: 1.00 },
+                            { amount: 500, modifier: 0.85 }
+                        ],
+                        brackets: [
+                            { min: 1, max: 25, pre: {'25000': 2.51, '50000': 2.97, '100000': 3.69}, noPre: {'25000': 2.28, '50000': 2.63, '100000': 3.35} },
+                            { min: 26, max: 34, pre: {'25000': 2.68, '50000': 3.10, '100000': 3.98}, noPre: {'25000': 2.44, '50000': 2.82, '100000': 3.62} },
+                            { min: 35, max: 39, pre: {'25000': 2.83, '50000': 3.25, '100000': 4.17}, noPre: {'25000': 2.57, '50000': 2.95, '100000': 3.79} },
+                            { min: 40, max: 54, pre: {'25000': 3.25, '50000': 3.59, '100000': 5.24}, noPre: {'25000': 2.95, '50000': 3.26, '100000': 4.76} },
+                            { min: 55, max: 59, pre: {'25000': 3.41, '50000': 4.05, '100000': 5.65}, noPre: {'25000': 3.10, '50000': 3.68, '100000': 5.14} },
+                            { min: 60, max: 64, pre: {'25000': 4.29, '50000': 5.03, '100000': 6.60}, noPre: {'25000': 3.90, '50000': 4.57, '100000': 6.00} }
+                        ]
+                    },
+                    "Tugo": {
+                        deductibles: [
+                            { amount: 0, modifier: 1.00 },
+                            { amount: 150, modifier: 0.95 },
+                            { amount: 500, modifier: 0.90 }
+                        ],
+                        brackets: [
+                            { min: 0, max: 25, pre: {'25000': 2.37, '50000': 2.73, '100000': 3.59}, noPre: {'25000': 1.93, '50000': 2.23, '100000': 2.93} },
+                            { min: 26, max: 34, pre: {'25000': 2.56, '50000': 2.92, '100000': 3.94}, noPre: {'25000': 2.08, '50000': 2.38, '100000': 3.21} },
+                            { min: 35, max: 39, pre: {'25000': 2.73, '50000': 3.03, '100000': 4.18}, noPre: {'25000': 2.23, '50000': 2.47, '100000': 3.40} },
+                            { min: 40, max: 54, pre: {'25000': 3.16, '50000': 3.59, '100000': 5.33}, noPre: {'25000': 2.57, '50000': 2.93, '100000': 4.34} },
+                            { min: 55, max: 59, pre: {'25000': 3.48, '50000': 4.02, '100000': 5.73}, noPre: {'25000': 2.84, '50000': 3.28, '100000': 4.67} },
+                            { min: 60, max: 64, pre: {'25000': 4.60, '50000': 5.41, '100000': 6.90}, noPre: {'25000': 3.31, '50000': 3.89, '100000': 4.69} }
+                        ]
+                    }
+                }
+            }
+        },
+        methods: {
+            calculateQuotes() {
+                if (!this.age || !this.days) {
+                    alert("Please enter both Age and Length of Stay.");
+                    return;
+                }
+
+                let results = [];
+
+                // Loop through all 4 providers
+                Object.keys(this.rateData).forEach(company => {
+                    let provider = this.rateData[company];
+                    
+                    // Find the matching age bracket
+                    let bracket = provider.brackets.find(b => this.age >= b.min && this.age <= b.max);
+                    
+                    if (bracket) {
+                        // Select correct rate condition
+                        let baseRate = this.hasPreExisting ? bracket.pre[this.coverage] : bracket.noPre[this.coverage];
+                        
+                        if (baseRate) {
+                            // Calculate each deductible option
+                            provider.deductibles.forEach(deduct => {
+                                let daily = Math.round((baseRate * deduct.modifier) * 100) / 100;
+                                let total = daily * this.days;
+                                
+                                results.push({
+                                    company: company,
+                                    deductible: deduct.amount,
+                                    dailyRate: daily,
+                                    totalPremium: total
+                                });
+                            });
+                        }
+                    }
+                });
+
+                // Sort from lowest total premium to highest
+                this.quotes = results.sort((a, b) => a.totalPremium - b.totalPremium);
+            }
+        }
+    }).mount('#app');
+});
+</script>
