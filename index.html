@@ -187,7 +187,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 // Sort from lowest total premium to highest
-                this.quotes = results.sort((a, b) => a.totalPremium - b.totalPremium);
+                const companyOrder = ["Destination", "JF", "Manulife", "Tugo"];
+
+                this.quotes = results.sort((a, b) => {
+                    // 1. First, sort by the specific order of companies
+                    if (a.company !== b.company) {
+                        return companyOrder.indexOf(a.company) - companyOrder.indexOf(b.company);
+                    }
+                    // 2. If it's the same company, sort deductibles from small to large
+                    return a.deductible - b.deductible;
+                });
             }
         }
     }).mount('#app');
